@@ -7,6 +7,7 @@ import {
   findArticleBySlug,
   getArticleSlug,
   searchNews,
+  fetchFullArticleContent,
 } from "@/lib/gnews";
 import {
   ArrowLeft,
@@ -36,17 +37,54 @@ function formatDate(iso: string): string {
   }
 }
 
-function formatArticleBody(content: string, description: string | null): string[] {
-  const raw = (content || description || "").replace(/\s*\[\+\d+ chars\]\s*$/, "");
+function formatArticleBody(
+  content: string,
+  description: string | null,
+): string[] {
+  const cleanContent = (content || "")
+    .replace(/\s*\[\+\d+ chars\]\s*$/, "")
+    .trim();
+  const cleanDesc = (description || "").trim();
 
-  const paragraphs = raw
+  let raw = "";
+  if (cleanDesc && cleanContent) {
+    if (cleanContent.startsWith(cleanDesc.slice(0, 30))) {
+      raw = cleanContent;
+    } else if (
+      cleanDesc.length > cleanContent.length &&
+      cleanDesc.startsWith(cleanContent.slice(0, 30))
+    ) {
+      raw = cleanDesc;
+    } else {
+      raw = cleanDesc + "\n\n" + cleanContent;
+    }
+  } else {
+    raw = cleanContent || cleanDesc;
+  }
+
+  let trimmed = raw.trim();
+  if (trimmed && !/[.!?]$/.test(trimmed)) {
+    const words = trimmed.split(/\s+/);
+    if (words.length > 1) {
+      words.pop();
+      trimmed = words.join(" ") + "...";
+    } else {
+      trimmed += "...";
+    }
+  }
+
+  const paragraphs = trimmed
     .split(/\n{2,}|(?<=[.!?])\s+(?=[A-ZÀ-ÿ])/)
     .map((paragraph) => paragraph.trim())
-    .filter(Boolean);
+    .filter((paragraph) => paragraph.length > 10);
 
-  return paragraphs.length > 0
-    ? paragraphs
-    : ["Liputan lengkap masih berkembang. Pantau terus D'NEWS untuk update berikutnya."];
+  if (paragraphs.length === 0) {
+    return [
+      "Liputan lengkap masih berkembang. Pantau terus D'NEWS untuk update berikutnya.",
+    ];
+  }
+
+  return paragraphs;
 }
 
 export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
@@ -54,7 +92,9 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
 
   const articleGroups = await Promise.all([
     fetchTopHeadlines(10),
-    ...Object.values(CATEGORIES).map((category) => searchNews(category.query, 10)),
+    ...Object.values(CATEGORIES).map((category) =>
+      searchNews(category.query, 10),
+    ),
   ]);
 
   const articles = articleGroups.flat();
@@ -72,7 +112,12 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
     )
     .slice(0, 3);
 
-  const contentParagraphs = formatArticleBody(article.content, article.description);
+  let rawContent = article.content || "";
+  if (rawContent.length < 500 || /\[\+\d+\s*chars\]/.test(rawContent)) {
+    rawContent = await fetchFullArticleContent(article.url, rawContent);
+  }
+
+  const contentParagraphs = formatArticleBody(rawContent, article.description);
 
   return (
     <main className="min-h-screen bg-paper-white">
@@ -145,9 +190,9 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
                   Redaksi Note
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-harsh-black/80 font-sans">
-                  Halaman ini menjaga user tetap berada di ekosistem D'NEWS, lalu
-                  menyediakan jalur keluar yang jelas ke sumber asli bila ingin
-                  verifikasi lanjutan.
+                  Halaman ini menjaga user tetap berada di ekosistem D'NEWS,
+                  lalu menyediakan jalur keluar yang jelas ke sumber asli bila
+                  ingin verifikasi lanjutan.
                 </p>
               </div>
             </aside>
@@ -163,11 +208,13 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
               <img
                 src={article.image}
                 alt={article.title}
-                className="h-[280px] w-full object-cover md:h-[420px]"
+                className="w-full aspect-video object-contain bg-black"
               />
             ) : (
-              <div className="flex h-[280px] items-center justify-center bg-hot-pink text-white md:h-[420px]">
-                <span className="font-display text-6xl uppercase md:text-8xl">NEWS</span>
+              <div className="flex w-full aspect-video items-center justify-center bg-hot-pink text-white">
+                <span className="font-display text-6xl uppercase md:text-8xl">
+                  NEWS
+                </span>
               </div>
             )}
           </div>
@@ -191,7 +238,9 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
 
           <aside className="space-y-4">
             <div className="rotate-[1deg] border-[3px] border-harsh-black bg-hot-pink p-5 text-white brutal-shadow">
-              <p className="text-xs font-bold uppercase font-sans">Fast Facts</p>
+              <p className="text-xs font-bold uppercase font-sans">
+                Fast Facts
+              </p>
               <ul className="mt-4 space-y-3 text-sm uppercase font-bold font-sans">
                 <li>Headline diambil dari feed GNews</li>
                 <li>Slug dibentuk dari judul artikel</li>
@@ -211,9 +260,7 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
         </div>
       </section>
 
-      {relatedArticles.length > 0 && (
-        <NewsGrid articles={relatedArticles} />
-      )}
+      {relatedArticles.length > 0 && <NewsGrid articles={relatedArticles} />}
 
       <Footer />
     </main>

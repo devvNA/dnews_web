@@ -40,7 +40,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className={`${anton.variable} ${spaceGrotesk.variable} font-sans antialiased`}>
+      <body
+        suppressHydrationWarning
+        className={`${anton.variable} ${spaceGrotesk.variable} font-sans antialiased`}
+      >
         {children}
         <Analytics />
       </body>

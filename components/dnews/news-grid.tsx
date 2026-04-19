@@ -174,7 +174,8 @@ const FALLBACK_ITEMS: NewsItem[] = [
     categoryEmoji: "💬",
     categoryColor: "pink",
     title: "VIRAL KAMPUNG PINTAR: WARGA UBAH GANG SEMPIT JADI RUANG BELAJAR",
-    excerpt: "Inisiatif kecil dari warga lokal justru memicu gerakan besar yang menarik perhatian publik.",
+    excerpt:
+      "Inisiatif kecil dari warga lokal justru memicu gerakan besar yang menarik perhatian publik.",
     author: "Nadia Rahma",
     date: "23 Feb 2026",
     size: "small",
@@ -296,16 +297,24 @@ function NewsCard({ item }: { item: NewsItem }) {
 interface NewsGridProps {
   articles?: GNewsArticle[];
   activeCategory?: CategoryKey;
+  hideViewAll?: boolean;
 }
 
-export function NewsGrid({ articles, activeCategory }: NewsGridProps) {
+export function NewsGrid({
+  articles,
+  activeCategory,
+  hideViewAll,
+}: NewsGridProps) {
   const newsItems =
     articles && articles.length > 0
       ? mapArticles(articles, activeCategory)
       : FALLBACK_ITEMS;
 
   return (
-    <section id="berita-terkini" className="bg-paper-white py-12 md:py-20 px-4 md:px-6">
+    <section
+      id="berita-terkini"
+      className="bg-paper-white py-12 md:py-20 px-4 md:px-6"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8 md:mb-12">
@@ -317,9 +326,14 @@ export function NewsGrid({ articles, activeCategory }: NewsGridProps) {
               BERITA TERKINI
             </h2>
           </div>
-          <button className="bg-neon-yellow text-harsh-black px-6 py-3 font-bold uppercase text-sm border-[3px] border-harsh-black brutal-shadow brutal-shadow-hover brutal-shadow-active self-start md:self-auto transition-all duration-[100ms] font-sans">
-            LIHAT SEMUA
-          </button>
+          {!hideViewAll && (
+            <Link
+              href="/news"
+              className="bg-neon-yellow text-harsh-black px-6 py-3 font-bold uppercase text-sm border-[3px] border-harsh-black brutal-shadow brutal-shadow-hover brutal-shadow-active self-start md:self-auto transition-all duration-[100ms] font-sans inline-block"
+            >
+              LIHAT SEMUA
+            </Link>
+          )}
         </div>
 
         {/* Bento Grid */}
